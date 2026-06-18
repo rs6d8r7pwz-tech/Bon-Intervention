@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bon d'Intervention — Electreau</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --blue: #1e50a0;
+      --blue-dark: #163a7a;
+      --blue-light: #e8f0fb;
+      --blue-mid: #c8d8f5;
+      --text: #1a1a2e;
+      --gray: #6b7280;
+      --border: #d1d5db;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --white: #ffffff;
+      --bg: #f5f7fc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .header {
+      background: var(--blue);
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .header-logo { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+    .header-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+    .container { max-width: 740px; margin: 28px auto; padding: 0 16px 80px; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+      padding: 26px;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 17px; font-weight: 700; color: var(--blue);
+      margin-bottom: 18px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--blue-light);
+    }
+    .field { margin-bottom: 14px; }
+    label {
+      display: block; font-size: 12px; font-weight: 700;
+      color: var(--gray); margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    input[type="text"], input[type="date"], input[type="time"],
+    input[type="number"], textarea, select {
+      width: 100%; padding: 10px 13px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 15px; transition: border-color 0.2s; background: white;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(30,80,160,0.1);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+    /* MODE CARDS */
+    .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+    .mode-card {
+      border: 2px solid var(--border); border-radius: 12px;
+      padding: 28px 20px; cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .mode-card:hover { border-color: var(--blue); background: var(--blue-light); transform: translateY(-2px); }
+    .mode-card .icon { font-size: 40px; margin-bottom: 14px; }
+    .mode-card .title { font-size: 17px; font-weight: 800; color: var(--blue); }
+    .mode-card .desc { font-size: 13px; color: var(--gray); margin-top: 8px; line-height: 1.5; }
+
+    /* TOGGLE */
+    .toggle-group { display: flex; gap: 6px; }
+    .toggle-btn {
+      flex: 1; padding: 9px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      background: white; cursor: pointer; font-size: 14px; font-weight: 700;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .toggle-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+    /* TRAJET BADGES */
+    .trajet-info { display: flex; gap: 10px; margin-top: 9px; flex-wrap: wrap; }
+    .badge {
+      background: var(--blue-light); border: 1px solid var(--blue-mid);
+      border-radius: 20px; padding: 5px 13px; font-size: 13px; font-weight: 600;
+      color: var(--blue); display: inline-flex; align-items: center; gap: 5px;
+    }
+    .badge.loading { opacity: 0.6; animation: pulse 1s infinite; }
+    .badge.error { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
+    .badge.success-green { background: #dcfce7; border-color: #86efac; color: var(--success); }
+    @keyframes pulse { 0%,100% { opacity:.6 } 50% { opacity:1 } }
+
+    /* MATERIAUX */
+    .mat-header {
+      display: grid; grid-template-columns: 1fr 130px 38px; gap: 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--gray); margin-bottom: 6px;
+      padding: 0 4px;
+    }
+    .materiau-row {
+      display: grid; grid-template-columns: 1fr 130px 38px;
+      gap: 8px; align-items: center; margin-bottom: 8px;
+    }
+    .btn-remove {
+      width: 38px; height: 38px; border: none;
+      background: #fee2e2; color: var(--danger);
+      border-radius: 8px; cursor: pointer; font-size: 15px;
+      transition: background 0.15s; flex-shrink: 0;
+    }
+    .btn-remove:hover { background: #fca5a5; }
+    .btn-add {
+      background: var(--blue-light); color: var(--blue);
+      border: 1.5px dashed var(--blue); border-radius: 8px;
+      padding: 9px; width: 100%; cursor: pointer; font-size: 14px;
+      font-weight: 700; margin-top: 4px; transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-add:hover { background: var(--blue-mid); }
+    .mat-total {
+      text-align: right; font-size: 15px; font-weight: 800; color: var(--blue);
+      margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--blue-light);
+    }
+
+    /* BUTTONS */
+    .btn-primary {
+      background: var(--blue); color: white; border: none; border-radius: 8px;
+      padding: 12px 26px; font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: background 0.15s; font-family: inherit;
+    }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-primary:disabled { background: var(--border); color: var(--gray); cursor: not-allowed; }
+    .btn-secondary {
+      background: white; color: var(--blue); border: 2px solid var(--blue);
+      border-radius: 8px; padding: 10px 22px; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    .btn-secondary:hover { background: var(--blue-light); }
+    .btn-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 22px; }
+
+    /* STEPS */
+    .steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-bottom: 24px;
+    }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+      background: var(--border); color: var(--gray);
+    }
+    .step-dot.active { background: var(--blue); color: white; }
+    .step-dot.done { background: var(--success); color: white; }
+    .step-line { flex: 1; height: 2px; background: var(--border); max-width: 64px; }
+    .step-line.done { background: var(--success); }
+
+    /* PREVIEW TABLE */
+    .preview-section { margin-bottom: 16px; }
+    .preview-section h4 {
+      font-size: 11px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--blue);
+      margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--blue-light);
+    }
+    .preview-table { width: 100%; border-collapse: collapse; }
+    .preview-table td { padding: 7px 10px; font-size: 14px; border-bottom: 1px solid var(--blue-light); }
+    .preview-table td:first-child { font-weight: 600; color: var(--gray); width: 42%; }
+    .preview-table tr:last-child td { border-bottom: none; }
+
+    /* SUCCESS */
+    .success-icon { font-size: 56px; text-align: center; margin: 8px 0 12px; }
+    .success-title { font-size: 22px; font-weight: 800; color: var(--success); text-align: center; margin-bottom: 6px; }
+    .success-sub { text-align: center; color: var(--gray); font-size: 15px; line-height: 1.6; }
+
+    /* GOOGLE CALENDAR */
+    .event-list { display: flex; flex-direction: column; gap: 10px; }
+    .event-card {
+      border: 2px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+    }
+    .event-card:hover { border-color: var(--blue); background: var(--blue-light); }
+    .event-card.selected { border-color: var(--blue); background: var(--blue-light); }
+    .event-title { font-weight: 700; font-size: 15px; }
+    .event-time { font-size: 12px; color: var(--gray); margin-top: 4px; }
+    .event-loc { font-size: 12px; color: var(--blue); margin-top: 3px; }
+
+    /* NOTE */
+    .note {
+      background: #fffbeb; border: 1px solid #fcd34d;
+      border-radius: 8px; padding: 12px 14px; font-size: 14px;
+      color: #92400e; line-height: 1.5;
+    }
+    .info-box {
+      background: var(--blue-light); border: 1px solid var(--blue-mid);
+      border-radius: 8px; padding: 10px 14px; font-size: 13px;
+      color: var(--blue); line-height: 1.5; margin-top: 6px;
+    }
+    .duree-site-badge {
+      background: #dcfce7; border: 1px solid #86efac;
+      border-radius: 8px; padding: 8px 14px; font-size: 14px;
+      font-weight: 700; color: #166534; margin-top: 4px; margin-bottom: 8px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    /* AUTOCOMPLETE ADRESSE */
+    .ac-wrap { position: relative; flex: 1; }
+    .ac-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: white; border: 1.5px solid var(--blue);
+      border-radius: 10px; box-shadow: 0 6px 24px rgba(30,80,160,0.15);
+      z-index: 200; max-height: 240px; overflow-y: auto;
+    }
+    .ac-item {
+      padding: 10px 13px; cursor: pointer; font-size: 14px;
+      border-bottom: 1px solid var(--blue-light); line-height: 1.4;
+      transition: background 0.1s;
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover { background: var(--blue-light); }
+    .ac-item-main { font-weight: 600; color: var(--text); }
+    .ac-item-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .ac-loading { padding: 10px 13px; font-size: 13px; color: var(--gray); font-style: italic; }
+
+    @media (max-width: 600px) {
+      .mode-cards, .field-row, .field-row-3 { grid-template-columns: 1fr; }
+      .mat-header { grid-template-columns: 1fr 100px 38px; }
+      .materiau-row { grid-template-columns: 1fr 100px 38px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">⚡ ELECTREAU</div>
+    <div class="header-sub">Services électriques &amp; travaux — Bons d'intervention</div>
+  </div>
+</div>
+
+<div class="container" id="app"></div>
+
+<script>
+// ============================================================
+// CONFIGURATION — adaptez ces valeurs si nécessaire
+// ============================================================
+const CONFIG = {
+  companyName:    "Electreau",
+  companySubtitle: "Services électriques & travaux",
+  departAddress:  "3553 Route de Chamont Saint-Chef 38890",
+  departCoords:   null,  // initialisé par la BAN (api-adresse.data.gouv.fr) au démarrage
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  step: 1,          // 1: saisie | 2: vérif | 3: done
+  form: newForm(),
+  isLoadingTrajet: false,
+  trajetError: null,
+};
+
+function newForm() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return {
+    numero:         `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`,
+    technicien:     '',
+    date:           today(),
+    client:         '',
+    adresse:        '',
+    heureArrivee:   '',
+    heureDepart:    '',
+    description:    '',
+    hasRemarques:   false,
+    remarques:      '',
+    materiaux:      [],     // [{designation, prix}]
+    km:             null,   // km aller-retour calculés
+    trajetMin:      null,   // minutes aller-retour calculés
+    dureeSiteMin:   null,   // minutes sur site calculées
+    adresseCoords:  null,   // {lat, lon} quand sélection autocomplétion
+  };
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ============================================================
+// CALCUL TRAJET (Nominatim + OSRM)
+// ============================================================
+// ============================================================
+// GÉOCODAGE — Base Adresse Nationale (api-adresse.data.gouv.fr)
+// API officielle du gouvernement français, précision GPS, gratuite, sans clé
+// ============================================================
+async function banSearch(query, opts = {}) {
+  let url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=${opts.limit || 1}`;
+  if (opts.postcode) url += `&postcode=${opts.postcode}`;
+  if (opts.type)     url += `&type=${opts.type}`;
+  const r = await fetch(url);
+  const data = await r.json();
+  return data.features || [];
+}
+
+// Géocode une adresse (retourne {lat, lon, label, score})
+async function geocode(address) {
+  // Essai 1 : adresse complète
+  let feats = await banSearch(address);
+  if (feats.length && feats[0].properties.score > 0.3) {
+    const f = feats[0];
+    return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], label: f.properties.label };
+  }
+
+  // Essai 2 : sans le numéro de rue
+  const sansNum = address.replace(/^\d+[a-zA-Z]?\s+/, '');
+  if (sansNum !== address) {
+    feats = await banSearch(sansNum);
+    if (feats.length && feats[0].properties.score > 0.2) {
+      const f = feats[0];
+      return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], label: f.properties.label };
+    }
+  }
+
+  // Essai 3 : extraire code postal + ville (ex: "38300 Bourgoin")
+  const pcMatch = address.match(/\b(\d{5})\b/);
+  const parts   = address.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  if (pcMatch && parts.length) {
+    feats = await banSearch(parts[parts.length - 1], { postcode: pcMatch[1], type: 'municipality' });
+    if (feats.length) {
+      const f = feats[0];
+      return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], label: f.properties.label };
+    }
+  }
+
+  // Essai 4 : dernier mot (commune seule)
+  if (parts.length) {
+    feats = await banSearch(parts[parts.length - 1], { type: 'municipality' });
+    if (feats.length) {
+      const f = feats[0];
+      return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], label: f.properties.label };
+    }
+  }
+
+  throw new Error('Adresse introuvable. Sélectionnez une suggestion dans la liste déroulante.');
+}
+
+// Initialise les coordonnées de départ via la BAN au chargement de la page
+async function initDepartCoords() {
+  try {
+    const cached = localStorage.getItem('electreau_depart_v2');
+    if (cached) { CONFIG.departCoords = JSON.parse(cached); return; }
+    const feats = await banSearch(CONFIG.departAddress, { limit: 1 });
+    if (feats.length) {
+      CONFIG.departCoords = { lat: feats[0].geometry.coordinates[1], lon: feats[0].geometry.coordinates[0] };
+      localStorage.setItem('electreau_depart_v2', JSON.stringify(CONFIG.departCoords));
+    } else {
+      // Fallback : centre de Saint-Chef si BAN échoue
+      CONFIG.departCoords = { lat: 45.534, lon: 5.364 };
+    }
+  } catch(e) {
+    CONFIG.departCoords = { lat: 45.534, lon: 5.364 };
+  }
+}
+
+async function osrmRoute(lat1, lon1, lat2, lon2) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+  const r = await fetch(url);
+  const data = await r.json();
+  if (data.code !== 'Ok') throw new Error("Impossible de calculer le trajet");
+  return { distanceM: data.routes[0].distance, durationS: data.routes[0].duration };
+}
+
+async function calculateTrajet(adresse) {
+  state.isLoadingTrajet = true;
+  state.trajetError = null;
+  renderApp();
+  try {
+    // S'assurer que les coordonnées de départ sont initialisées
+    if (!CONFIG.departCoords) await initDepartCoords();
+
+    // Coordonnées destination : depuis autocomplétion BAN (précis) ou géocodage BAN
+    const dest = state.form.adresseCoords || await geocode(adresse);
+
+    const route = await osrmRoute(
+      CONFIG.departCoords.lat, CONFIG.departCoords.lon,
+      dest.lat, dest.lon
+    );
+    state.form.km          = Math.round(route.distanceM / 100) / 10 * 2; // km A/R
+    state.form.trajetMin   = Math.round(route.durationS / 60) * 2;        // min A/R
+  } catch(err) {
+    state.trajetError = err.message;
+    state.form.km = null;
+    state.form.trajetMin = null;
+  }
+  state.isLoadingTrajet = false;
+  renderApp();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function calcDureeSite(ha, hd) {
+  if (!ha || !hd) return null;
+  const [h1,m1] = ha.split(':').map(Number);
+  const [h2,m2] = hd.split(':').map(Number);
+  const d = (h2*60+m2) - (h1*60+m1);
+  return d > 0 ? d : null;
+}
+
+function fmtDuree(min) {
+  if (!min && min !== 0) return '—';
+  const h = Math.floor(min/60), m = min%60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2,'0')}`;
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  return new Date(s+'T12:00:00').toLocaleDateString('fr-FR');
+}
+
+function totalMat() {
+  return state.form.materiaux.reduce((s,m) => s + (parseFloat(m.prix)||0), 0);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveForm() {
+  const g = id => document.getElementById(id);
+  const f = state.form;
+  ['technicien','date','client','numero','adresse','heureArrivee','heureDepart','description','remarques']
+    .forEach(id => { if (g(id)) f[id] = g(id).value; });
+}
+
+// ============================================================
+// PDF GENERATION (jsPDF)
+// ============================================================
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const f = state.form;
+  const ML = 15, MR = 15, PW = 210 - ML - MR;
+  let y = 0;
+
+  // Palette premium Electreau
+  const NAVY      = [22, 45, 85];       // bleu marine profond — en-tête, titres
+  const RED       = [215, 45, 40];      // rouge vif lumineux — ELECTR, accents
+  const BLUE      = [0, 165, 215];      // bleu clair vif — eau, sections
+  const BL_LIGHT  = [242, 248, 253];    // fond très clair sections
+  const BL_PALE   = [249, 253, 255];    // fond champs alternés
+  const GRAY      = [70, 70, 70];       // texte labels
+  const LGRAY     = [140, 140, 140];    // texte secondaire
+  const WHITE     = [255, 255, 255];
+  const YELLOW_BG = [255, 252, 230];
+
+  // — BANDEAU HEADER — bleu marine + ELECTR rouge + eau bleu
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, 210, 32, 'F');
+  // Bande décorative rouge fine en bas du header
+  doc.setFillColor(...RED);
+  doc.rect(0, 29, 105, 3, 'F');
+  doc.setFillColor(...BLUE);
+  doc.rect(105, 29, 105, 3, 'F');
+  // Texte logo
+  doc.setFont('helvetica','bold'); doc.setFontSize(24);
+  doc.setTextColor(...RED);
+  doc.text('ELECTR', ML, 18);
+  const electrW = doc.getTextWidth('ELECTR');
+  doc.setTextColor(...BLUE);
+  doc.text('eau', ML + electrW, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.setTextColor(175, 215, 235);
+  doc.text("Pompage et Traitement de l'eau  •  Télégestion  •  Supervision", ML, 26);
+  doc.setTextColor(0, 0, 0);
+  y = 42;
+
+  // — TITRE + N° —
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.setTextColor(...NAVY);
+  doc.text("BON D'INTERVENTION", ML, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.setTextColor(...LGRAY);
+  doc.text(`N° ${f.numero}`, 210-MR, y, {align:'right'});
+  y += 3.5;
+  // Ligne bicolore rouge → bleu
+  const mid = ML + (210 - ML - MR) / 2;
+  doc.setDrawColor(...RED); doc.setLineWidth(0.7);
+  doc.line(ML, y, mid, y);
+  doc.setDrawColor(...BLUE);
+  doc.line(mid, y, 210-MR, y);
+  y += 7; doc.setDrawColor(0); doc.setLineWidth(0.2);
+
+  function sectionTitle(title) {
+    // Fond très clair
+    doc.setFillColor(...BL_LIGHT);
+    doc.rect(ML, y, PW, 7, 'F');
+    // Liseré marine à gauche
+    doc.setFillColor(...NAVY);
+    doc.rect(ML, y, 3, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.setTextColor(...NAVY);
+    doc.text(`    ${title.toUpperCase()}`, ML + 2, y + 5);
+    doc.setTextColor(0); doc.setLineWidth(0.2);
+    y += 9;
+  }
+
+  function field(label, value, opts={}) {
+    const lw = opts.lw||55, fill=opts.fill;
+    if (fill) { doc.setFillColor(...BL_PALE); doc.rect(ML,y,PW,6.5,'F'); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(`${label} :`, ML+2, y+4.5);
+    doc.setFont('helvetica','normal'); doc.setTextColor(0);
+    // handle multiline
+    const lines = doc.splitTextToSize(String(value||'—'), PW-lw-2);
+    doc.text(lines, ML+lw, y+4.5);
+    y += Math.max(6.5, lines.length*6);
+  }
+
+  // Saut de page préventif
+  function checkBreak(h=20) {
+    if (y + h > 275) { doc.addPage(); y = 20; }
+  }
+
+  function twoFields(l1,v1,l2,v2, lw=48) {
+    const hw = PW/2;               // 90mm par colonne
+    const maxV = hw - lw - 2;      // largeur max pour la valeur
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(`${l1} :`, ML+2, y+4.5);
+    doc.setFont('helvetica','normal'); doc.setTextColor(0);
+    // Clip valeur col 1 à 1 ligne
+    const v1s = doc.splitTextToSize(String(v1||'—'), maxV);
+    doc.text(v1s[0], ML+lw, y+4.5);
+    doc.setFont('helvetica','bold'); doc.setTextColor(...GRAY);
+    doc.text(`${l2} :`, ML+hw+2, y+4.5);
+    doc.setFont('helvetica','normal'); doc.setTextColor(0);
+    const v2s = doc.splitTextToSize(String(v2||'—'), maxV);
+    doc.text(v2s[0], ML+hw+lw, y+4.5);
+    y += 6.5;
+  }
+
+  // — CLIENT —
+  checkBreak(35);
+  sectionTitle("Informations client");
+  field("Client", f.client, {fill:true});
+  field("Adresse d'intervention", f.adresse);
+  twoFields("Date", fmtDate(f.date), "Technicien", f.technicien);
+  y += 2;
+
+  // — MISSION —
+  checkBreak(25);
+  sectionTitle("Mission effectuée");
+  doc.setFillColor(...BL_PALE);
+  const descLines = doc.splitTextToSize(f.description||'—', PW-6);
+  const dh = Math.max(10, descLines.length*5.5+5);
+  doc.rect(ML, y, PW, dh, 'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.setTextColor(0);
+  doc.text(descLines, ML+3, y+4.5);
+  y += dh+2;
+
+  // — REMARQUES —
+  if (f.hasRemarques && f.remarques) {
+    checkBreak(20);
+    sectionTitle("Remarques");
+    doc.setFillColor(...YELLOW_BG);
+    const remLines = doc.splitTextToSize(f.remarques, PW-6);
+    const rh = Math.max(10, remLines.length*5.5+5);
+    doc.rect(ML, y, PW, rh, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(remLines, ML+3, y+4.5);
+    y += rh+2;
+  }
+  y += 1;
+
+  // — DÉPLACEMENT —
+  checkBreak(30);
+  sectionTitle("Déplacement");
+  twoFields(
+    "Distance A/R", f.km!=null ? `${f.km} km` : '—',
+    "Durée trajet A/R", f.trajetMin!=null ? fmtDuree(f.trajetMin) : '—'
+  );
+  twoFields("Heure d'arrivée", f.heureArrivee||'—', "Heure de départ", f.heureDepart||'—');
+  if (f.dureeSiteMin) field("Durée sur site", fmtDuree(f.dureeSiteMin), {fill:true});
+  y += 2;
+
+  // — MATÉRIEL —
+  checkBreak(25);
+  sectionTitle("Matériel utilisé");
+  const mats = f.materiaux.filter(m=>m.designation);
+  if (!mats.length) {
+    doc.setFont('helvetica','italic'); doc.setFontSize(9);
+    doc.setTextColor(...LGRAY);
+    doc.text('Néant', ML+3, y+4.5); doc.setTextColor(0);
+    y += 7;
+  } else {
+    // header row
+    doc.setFillColor(...NAVY);
+    doc.rect(ML, y, PW, 6.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    doc.setTextColor(...WHITE);
+    doc.text('  Désignation', ML+2, y+4.5);
+    doc.text('Montant', 210-MR-2, y+4.5, {align:'right'});
+    doc.setTextColor(0);
+    y += 6.5;
+
+    mats.forEach((m,i) => {
+      // désignation peut être longue — wrap + hauteur dynamique
+      const desigLines = doc.splitTextToSize(`  – ${m.designation||''}`, PW - 48);
+      const rowH = Math.max(6.5, desigLines.length*5.5+2);
+      checkBreak(rowH);
+      if (i%2===0) { doc.setFillColor(...BL_PALE); doc.rect(ML,y,PW,rowH,'F'); }
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(0);
+      doc.text(desigLines, ML+2, y+4.3);
+      const p = parseFloat(m.prix);
+      if (!isNaN(p)) doc.text(`${p.toFixed(2)} €`, 210-MR-2, y+4.3, {align:'right'});
+      y += rowH;
+    });
+
+    // total
+    const tot = totalMat();
+    doc.setFillColor(...RED);
+    doc.rect(ML, y, PW, 8, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.setTextColor(...WHITE);
+    doc.text('  TOTAL MATÉRIAUX', ML+2, y+5.8);
+    doc.text(`${tot.toFixed(2)} €`, 210-MR, y+5.8, {align:'right'});
+    doc.setTextColor(0);
+    y += 10;
+  }
+  y += 4;
+
+  // — SIGNATURES —
+  if (y > 234) { doc.addPage(); y = 20; }
+  sectionTitle("Signatures");
+  y += 2;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+  doc.setTextColor(...GRAY);
+  doc.text('Signature du technicien :', ML, y+4);
+  doc.text('Signature du client (bon pour accord) :', ML+95, y+4);
+  y += 22;
+  doc.setDrawColor(100); doc.setLineWidth(0.3);
+  doc.line(ML, y, ML+72, y);
+  doc.line(ML+95, y, 210-MR, y);
+
+  // — PIED DE PAGE —
+  doc.setFont('helvetica','italic'); doc.setFontSize(7);
+  doc.setTextColor(150);
+  const now = new Date();
+  doc.text(
+    `Document généré le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} — Electreau`,
+    105, 291, {align:'center'}
+  );
+
+  const fn = `bon_${(f.client||'client').replace(/\s+/g,'_')}_${f.date||today()}.pdf`;
+  doc.save(fn);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+const app = document.getElementById('app');
+
+function renderApp() {
+  switch(state.step) {
+    case 1: renderForm(); break;
+    case 2: renderPreview(); break;
+    case 3: renderDone(); break;
+  }
+}
+
+function steps(current) {
+  const labels = ['Saisie','Vérification','Terminé'];
+  return `
+    <div class="steps">
+      ${labels.map((l,i)=>{
+        const n = i+1;
+        const cls = n<current ? 'done' : n===current ? 'active' : '';
+        const icon = n<current ? '✓' : n;
+        const lineCls = n<current ? 'done' : '';
+        return `
+          <div class="step-dot ${cls}" title="${l}">${icon}</div>
+          ${n<labels.length ? `<div class="step-line ${lineCls}"></div>` : ''}
+        `;
+      }).join('')}
+    </div>`;
+}
+
+// ---- STEP 1: FORM ----
+function renderForm() {
+  state.step = 1;
+  const f = state.form;
+  const dsm = calcDureeSite(f.heureArrivee, f.heureDepart);
+  if (dsm !== null) f.dureeSiteMin = dsm;
+  const mats = f.materiaux;
+  const tot = totalMat();
+
+  app.innerHTML = `
+    ${steps(1)}
+    <form id="bon-form" onsubmit="submitForm(event)">
+
+      <div class="card">
+        <div class="card-title">👤 Informations générales</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Technicien *</label>
+            <input type="text" id="technicien" value="${esc(f.technicien)}" placeholder="Votre nom" required>
+          </div>
+          <div class="field">
+            <label>Date de l'intervention *</label>
+            <input type="date" id="date" value="${esc(f.date)}" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Client *</label>
+            <input type="text" id="client" value="${esc(f.client)}" placeholder="Nom du client ou société" required>
+          </div>
+          <div class="field">
+            <label>N° de bon</label>
+            <input type="text" id="numero" value="${esc(f.numero)}" placeholder="Auto-généré">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📍 Lieu &amp; horaires</div>
+        <div class="field">
+          <label>Adresse d'intervention *</label>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <div class="ac-wrap">
+              <input type="text" id="adresse" value="${esc(f.adresse)}"
+                placeholder="Ex: Creys-Mépieu, mairie de Morestel, 3 chemin des…"
+                style="width:100%" required autocomplete="off"
+                oninput="onAdresseInput(this.value)"
+                onblur="setTimeout(()=>closeAcDropdown(),180)">
+              <div class="ac-dropdown" id="ac-dropdown" style="display:none"></div>
+            </div>
+            <button type="button" onclick="lancerCalculTrajet()" class="btn-primary"
+              style="padding:10px 13px;white-space:nowrap;font-size:13px;flex-shrink:0">
+              ${state.isLoadingTrajet ? '⏳' : '📍 Calculer trajet'}
+            </button>
+          </div>
+          <div class="trajet-info">
+            ${state.isLoadingTrajet
+              ? `<span class="badge loading">⏳ Calcul en cours…</span>`
+              : f.km !== null
+                ? `<span class="badge">🚗 ${f.km} km A/R</span><span class="badge">⏱️ ${fmtDuree(f.trajetMin)} A/R</span>`
+                : state.trajetError
+                  ? `<span class="badge error">⚠️ ${esc(state.trajetError)}</span>`
+                  : `<span style="font-size:12px;color:var(--gray);margin-top:6px;">Départ : ${esc(CONFIG.departAddress)}</span>`}
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Heure d'arrivée sur site</label>
+            <input type="time" id="heureArrivee" value="${esc(f.heureArrivee)}" onchange="updateDureeSite()">
+          </div>
+          <div class="field">
+            <label>Heure de départ du site</label>
+            <input type="time" id="heureDepart" value="${esc(f.heureDepart)}" onchange="updateDureeSite()">
+          </div>
+        </div>
+        <div id="duree-site-display">
+          ${dsm ? `<div class="duree-site-badge">⏱️ Durée sur site : ${fmtDuree(dsm)}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Description de l'intervention</div>
+        <div class="field">
+          <label>Travaux effectués *</label>
+          <textarea id="description" rows="4" placeholder="Décrivez précisément les travaux réalisés…" required>${esc(f.description)}</textarea>
+        </div>
+        <div class="field">
+          <label>Remarques</label>
+          <div class="toggle-group" style="margin-bottom:10px">
+            <button type="button" class="toggle-btn ${!f.hasRemarques?'active':''}" onclick="setRemarques(false)">Aucune</button>
+            <button type="button" class="toggle-btn ${f.hasRemarques?'active':''}" onclick="setRemarques(true)">Oui, ajouter</button>
+          </div>
+          ${f.hasRemarques ? `<textarea id="remarques" rows="3" placeholder="Vos remarques (anomalie constatée, suite à prévoir…)">${esc(f.remarques)}</textarea>` : ''}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔧 Matériel utilisé</div>
+        ${mats.length ? `
+          <div class="mat-header">
+            <span>Désignation</span>
+            <span style="text-align:right">Prix unitaire (€)</span>
+            <span></span>
+          </div>` : ''}
+        <div id="mats-container">
+          ${mats.map((m,i)=>`
+            <div class="materiau-row" id="mat-${i}">
+              <input type="text" value="${esc(m.designation)}" placeholder="Ex: Câble 2.5mm², disjoncteur 16A…"
+                oninput="updateMat(${i},'designation',this.value)">
+              <input type="number" value="${esc(m.prix)}" placeholder="0.00" step="0.01" min="0"
+                style="text-align:right" oninput="updateMat(${i},'prix',this.value)">
+              <button type="button" class="btn-remove" onclick="removeMat(${i})" title="Supprimer">✕</button>
+            </div>`).join('')}
+        </div>
+        <button type="button" class="btn-add" onclick="addMat()">+ Ajouter un article</button>
+        ${mats.length ? `<div class="mat-total" id="mat-total">Total matériaux : ${tot.toFixed(2)} €</div>` : ''}
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary">Vérifier le bon →</button>
+      </div>
+    </form>`;
+}
+
+// ---- STEP 2: PREVIEW ----
+function renderPreview() {
+  state.step = 2;
+  const f = state.form;
+  const mats = f.materiaux.filter(m=>m.designation);
+  const tot = totalMat();
+
+  app.innerHTML = `
+    ${steps(2)}
+    <div class="card">
+      <div class="card-title">✅ Vérification avant génération</div>
+      <p style="color:var(--gray);font-size:14px;margin-bottom:18px;">
+        Vérifiez les informations ci-dessous. Cliquez sur « Modifier » pour corriger un champ.
+      </p>
+
+      <div class="preview-section">
+        <h4>Intervention</h4>
+        <table class="preview-table">
+          <tr><td>N° de bon</td><td>${esc(f.numero)}</td></tr>
+          <tr><td>Technicien</td><td>${esc(f.technicien)}</td></tr>
+          <tr><td>Date</td><td>${fmtDate(f.date)}</td></tr>
+          <tr><td>Client</td><td>${esc(f.client)}</td></tr>
+          <tr><td>Adresse</td><td>${esc(f.adresse)}</td></tr>
+        </table>
+      </div>
+
+      <div class="preview-section">
+        <h4>Déplacement &amp; présence sur site</h4>
+        <table class="preview-table">
+          <tr><td>Kilométrage A/R</td><td>${f.km!=null ? f.km+' km' : '<span style="color:var(--gray);font-style:italic">Non calculé</span>'}</td></tr>
+          <tr><td>Temps de trajet A/R</td><td>${f.trajetMin!=null ? fmtDuree(f.trajetMin) : '—'}</td></tr>
+          <tr><td>Heure arrivée → départ</td><td>${f.heureArrivee||'—'} → ${f.heureDepart||'—'}</td></tr>
+          <tr><td>Durée sur site</td><td>${fmtDuree(f.dureeSiteMin)}</td></tr>
+        </table>
+      </div>
+
+      <div class="preview-section">
+        <h4>Mission</h4>
+        <table class="preview-table">
+          <tr><td>Description</td><td style="white-space:pre-wrap">${esc(f.description)}</td></tr>
+          ${f.hasRemarques&&f.remarques ? `<tr><td>Remarques</td><td style="white-space:pre-wrap">${esc(f.remarques)}</td></tr>` : ''}
+        </table>
+      </div>
+
+      <div class="preview-section">
+        <h4>Matériel</h4>
+        ${mats.length ? `
+          <table class="preview-table">
+            ${mats.map(m=>`<tr><td>${esc(m.designation)}</td><td>${parseFloat(m.prix)?parseFloat(m.prix).toFixed(2)+' €':'—'}</td></tr>`).join('')}
+            <tr style="font-weight:800;color:var(--blue)"><td>Total</td><td>${tot.toFixed(2)} €</td></tr>
+          </table>` :
+          '<p style="color:var(--gray);font-style:italic;font-size:14px;">Aucun matériel renseigné</p>'}
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button type="button" class="btn-secondary" onclick="backToForm()">← Modifier</button>
+      <button type="button" class="btn-primary" onclick="doGenerate()">📄 Générer le PDF</button>
+    </div>`;
+}
+
+// ---- STEP 3: DONE ----
+function renderDone() {
+  state.step = 3;
+  app.innerHTML = `
+    ${steps(3)}
+    <div class="card" style="text-align:center;padding:36px 24px">
+      <div class="success-icon">📄✅</div>
+      <div class="success-title">Bon généré avec succès !</div>
+      <div class="success-sub">
+        Le fichier PDF a été téléchargé.<br>
+        Ouvrez-le, puis faites <strong>Ctrl+P</strong> (ou Cmd+P sur Mac) pour imprimer.
+      </div>
+      <div class="btn-row" style="justify-content:center;margin-top:24px">
+        <button type="button" class="btn-secondary" onclick="doGenerate()">↓ Re-télécharger le PDF</button>
+        <button type="button" class="btn-primary" onclick="nouveauBon()">+ Nouveau bon</button>
+      </div>
+    </div>`;
+}
+
+
+// ============================================================
+// ACTIONS
+// ============================================================
+// ============================================================
+// AUTOCOMPLÉTION ADRESSE (Nominatim)
+// ============================================================
+let _acTimer = null;
+
+function onAdresseInput(val) {
+  // Réinitialise les coordonnées stockées si l'utilisateur retape
+  state.form.adresseCoords = null;
+  state.form.km = null;
+  state.form.trajetMin = null;
+  state.trajetError = null;
+
+  clearTimeout(_acTimer);
+  if (!val || val.length < 3) { closeAcDropdown(); return; }
+  _acTimer = setTimeout(() => fetchAcSuggestions(val), 320);
+}
+
+async function fetchAcSuggestions(query) {
+  const dd = document.getElementById('ac-dropdown');
+  if (!dd) return;
+  dd.style.display = 'block';
+  dd.innerHTML = '<div class="ac-loading">🔍 Recherche en cours…</div>';
+  try {
+    // BAN — Base Adresse Nationale (api officielle France)
+    const feats = await banSearch(query, { limit: 6 });
+    if (!feats.length) {
+      dd.innerHTML = '<div class="ac-loading">Aucun résultat. Essayez d\'ajouter le code postal ou la commune.</div>';
+      return;
+    }
+    dd.innerHTML = feats.map((f, i) => {
+      const p = f.properties;
+      // Ligne principale : numéro + nom de rue ou nom du lieu
+      const main = p.type === 'housenumber'
+        ? `${p.housenumber || ''} ${p.street || p.name || ''}`.trim()
+        : (p.street || p.name || p.label.split(',')[0]);
+      // Ligne secondaire : code postal + commune
+      const sub = [p.postcode, p.city || p.municipality].filter(Boolean).join(' ');
+      return `<div class="ac-item" onmousedown="selectAcSuggestion(${i})">
+        <div class="ac-item-main">${esc(main)}</div>
+        <div class="ac-item-sub">📍 ${esc(sub)}</div>
+      </div>`;
+    }).join('');
+    dd._feats = feats;
+  } catch(e) {
+    dd.innerHTML = '<div class="ac-loading" style="color:var(--danger)">⚠️ Service de recherche indisponible.</div>';
+  }
+}
+
+function selectAcSuggestion(idx) {
+  const dd = document.getElementById('ac-dropdown');
+  if (!dd || !dd._feats) return;
+  const f = dd._feats[idx];
+  if (!f) return;
+
+  // Label propre : "numéro rue, code_postal commune"
+  const p = f.properties;
+  const adresseComplete = p.label;
+
+  const inp = document.getElementById('adresse');
+  if (inp) inp.value = adresseComplete;
+  state.form.adresse      = adresseComplete;
+  // Coordonnées précises BAN — évite toute étape de géocodage supplémentaire
+  state.form.adresseCoords = { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
+
+  closeAcDropdown();
+}
+
+function closeAcDropdown() {
+  const dd = document.getElementById('ac-dropdown');
+  if (dd) { dd.style.display = 'none'; dd.innerHTML = ''; }
+}
+
+function lancerCalculTrajet() {
+  const adresse = document.getElementById('adresse')?.value?.trim();
+  if (!adresse) { alert("Veuillez saisir une adresse d'intervention."); return; }
+  saveForm();
+  state.form.adresse = adresse;
+  calculateTrajet(adresse);
+}
+
+function updateDureeSite() {
+  const ha = document.getElementById('heureArrivee')?.value;
+  const hd = document.getElementById('heureDepart')?.value;
+  state.form.heureArrivee = ha || '';
+  state.form.heureDepart  = hd || '';
+  const dsm = calcDureeSite(ha, hd);
+  state.form.dureeSiteMin = dsm;
+  const el = document.getElementById('duree-site-display');
+  if (el) el.innerHTML = dsm
+    ? `<div class="duree-site-badge">⏱️ Durée sur site : ${fmtDuree(dsm)}</div>`
+    : '';
+}
+
+function setRemarques(v) {
+  saveForm();
+  state.form.hasRemarques = v;
+  renderApp();
+}
+
+function addMat() {
+  saveForm();
+  state.form.materiaux.push({designation:'', prix:''});
+  renderApp();
+}
+
+function removeMat(i) {
+  saveForm();
+  state.form.materiaux.splice(i,1);
+  renderApp();
+}
+
+function updateMat(i, field, val) {
+  state.form.materiaux[i][field] = val;
+  const tot = totalMat();
+  const el = document.getElementById('mat-total');
+  if (el) el.textContent = `Total matériaux : ${tot.toFixed(2)} €`;
+}
+
+function submitForm(e) {
+  e.preventDefault();
+  saveForm();
+  state.form.dureeSiteMin = calcDureeSite(state.form.heureArrivee, state.form.heureDepart);
+  state.step = 2;
+  renderApp();
+}
+
+function goBack() {
+  if (state.step > 1) { state.step--; renderApp(); }
+}
+
+function backToForm() {
+  state.step = 2;
+  renderApp();
+}
+
+function doGenerate() {
+  generatePDF();
+  state.step = 3;
+  renderApp();
+}
+
+function nouveauBon() {
+  state = { step: 1, form: newForm(), isLoadingTrajet: false, trajetError: null };
+  renderApp();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+// Pré-charge les coordonnées de départ (BAN) et au démarrage
+initDepartCoords();
+renderApp();
+</script>
+</body>
+</html>
