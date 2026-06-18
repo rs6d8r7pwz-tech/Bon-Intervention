@@ -296,6 +296,24 @@ const CONFIG = {
 // ============================================================
 // STATE
 // ============================================================
+const TECHNICIENS = [
+  'François Armanet','Loic Jaquet','Maxime Morel','Romain Durand',
+  'Jerome Boulud','Bastien Brochier','Richard Besson'
+];
+
+function onTechSelect(val) {
+  const input = document.getElementById('technicien');
+  if (val === '__autre__') {
+    input.style.display = 'block';
+    input.value = '';
+    input.focus();
+  } else {
+    input.style.display = 'none';
+    input.value = val;
+  }
+  saveForm();
+}
+
 let state = {
   step: 1,          // 1: saisie | 2: vérif | 3: done
   form: newForm(),
@@ -751,17 +769,18 @@ function renderForm() {
         <div class="field-row">
           <div class="field">
             <label>Technicien *</label>
-            <input type="text" id="technicien" list="techniciens-list"
-              value="${esc(f.technicien)}" placeholder="Sélectionner ou saisir..." required autocomplete="off">
-            <datalist id="techniciens-list">
-              <option value="François Armanet">
-              <option value="Loic Jaquet">
-              <option value="Maxime Morel">
-              <option value="Romain Durand">
-              <option value="Jerome Boulud">
-              <option value="Bastien Brochier">
-              <option value="Richard Besson">
-            </datalist>
+            ${(()=>{
+              const techInList = TECHNICIENS.includes(f.technicien);
+              const sel = techInList ? f.technicien : (f.technicien ? '__autre__' : '');
+              return \`<select id="technicien-select" onchange="onTechSelect(this.value)" style="margin-bottom:8px">
+                <option value="">— Sélectionner un technicien —</option>
+                \${TECHNICIENS.map(t=>\`<option value="\${t}" \${sel===t?'selected':''}>\${t}</option>\`).join('')}
+                <option value="__autre__" \${sel==='__autre__'?'selected':''}>✏️ Autre (saisie libre)</option>
+              </select>
+              <input type="text" id="technicien"
+                style="display:\${sel==='__autre__'?'block':'none'}"
+                value="\${esc(f.technicien)}" placeholder="Saisir le nom du technicien">\`;
+            })()}
           </div>
           <div class="field">
             <label>Date de l'intervention *</label>
