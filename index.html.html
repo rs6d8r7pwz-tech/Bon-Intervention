@@ -7,17 +7,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
-      --blue: #1e50a0;
-      --blue-dark: #163a7a;
-      --blue-light: #e8f0fb;
-      --blue-mid: #c8d8f5;
-      --text: #1a1a2e;
-      --gray: #6b7280;
-      --border: #d1d5db;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --white: #ffffff;
-      --bg: #f5f7fc;
+      --red:        #d42d28;
+      --red-dark:   #a81f1a;
+      --navy:       #16294a;
+      --navy-light: #223d6e;
+      --blue:       #0099cc;
+      --blue-light: #e0f5fb;
+      --blue-mid:   #99d9ef;
+      --text:       #1a2636;
+      --gray:       #6b7280;
+      --border:     #e2e8f0;
+      --success:    #16a34a;
+      --danger:     #dc2626;
+      --white:      #ffffff;
+      --bg:         #f0f4f8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -26,85 +29,107 @@
       color: var(--text);
       min-height: 100vh;
     }
+
+    /* ── HEADER ── */
     .header {
-      background: var(--blue);
-      color: white;
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      background: var(--navy);
+      box-shadow: 0 3px 16px rgba(0,0,0,0.25);
     }
-    .header-logo { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
-    .header-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
-    .container { max-width: 740px; margin: 28px auto; padding: 0 16px 80px; }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 28px 14px;
+    }
+    .header-brand {
+      font-size: 30px; font-weight: 900;
+      letter-spacing: -0.5px; line-height: 1;
+    }
+    .brand-electr { color: #e63228; }
+    .brand-eau    { color: #22c0ee; }
+    .header-texts { margin-top: 5px; }
+    .header-tagline {
+      font-size: 11px; color: rgba(255,255,255,0.5);
+      letter-spacing: 0.4px; margin-top: 3px;
+    }
+    .header-badge {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px; padding: 7px 16px;
+      font-size: 12px; font-weight: 700;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
+    }
+    .header-bar { display: flex; height: 4px; }
+    .header-bar-red  { flex: 1; background: #e63228; }
+    .header-bar-blue { flex: 1; background: #22c0ee; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 760px; margin: 30px auto; padding: 0 16px 80px; }
     .card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-      padding: 26px;
-      margin-bottom: 18px;
+      background: white; border-radius: 14px;
+      box-shadow: 0 2px 18px rgba(22,41,74,0.08);
+      padding: 24px 26px; margin-bottom: 18px;
     }
     .card-title {
-      font-size: 17px; font-weight: 700; color: var(--blue);
+      font-size: 14px; font-weight: 800; color: var(--navy);
       margin-bottom: 18px; padding-bottom: 10px;
       border-bottom: 2px solid var(--blue-light);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      display: flex; align-items: center; gap: 9px;
     }
+    .card-title::before {
+      content: ''; display: block;
+      width: 4px; height: 16px;
+      background: var(--red); border-radius: 2px; flex-shrink: 0;
+    }
+
+    /* ── FIELDS ── */
     .field { margin-bottom: 14px; }
     label {
-      display: block; font-size: 12px; font-weight: 700;
+      display: block; font-size: 11px; font-weight: 700;
       color: var(--gray); margin-bottom: 5px;
       text-transform: uppercase; letter-spacing: 0.5px;
     }
     input[type="text"], input[type="date"], input[type="time"],
     input[type="number"], textarea, select {
       width: 100%; padding: 10px 13px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-size: 15px; transition: border-color 0.2s; background: white;
-      font-family: inherit;
+      border: 1.5px solid var(--border); border-radius: 9px;
+      font-size: 15px; transition: border-color 0.2s, box-shadow 0.2s;
+      background: white; font-family: inherit; color: var(--text);
     }
     input:focus, textarea:focus, select:focus {
       outline: none; border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(30,80,160,0.1);
+      box-shadow: 0 0 0 3px rgba(0,153,204,0.12);
     }
     textarea { resize: vertical; min-height: 80px; }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 
-    /* MODE CARDS */
-    .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
-    .mode-card {
-      border: 2px solid var(--border); border-radius: 12px;
-      padding: 28px 20px; cursor: pointer; transition: all 0.2s; text-align: center;
-    }
-    .mode-card:hover { border-color: var(--blue); background: var(--blue-light); transform: translateY(-2px); }
-    .mode-card .icon { font-size: 40px; margin-bottom: 14px; }
-    .mode-card .title { font-size: 17px; font-weight: 800; color: var(--blue); }
-    .mode-card .desc { font-size: 13px; color: var(--gray); margin-top: 8px; line-height: 1.5; }
-
-    /* TOGGLE */
+    /* ── TOGGLE ── */
     .toggle-group { display: flex; gap: 6px; }
     .toggle-btn {
-      flex: 1; padding: 9px;
-      border: 1.5px solid var(--border); border-radius: 8px;
+      flex: 1; padding: 10px;
+      border: 1.5px solid var(--border); border-radius: 9px;
       background: white; cursor: pointer; font-size: 14px; font-weight: 700;
-      transition: all 0.15s; font-family: inherit;
+      transition: all 0.15s; font-family: inherit; color: var(--gray);
     }
-    .toggle-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+    .toggle-btn.active {
+      background: var(--navy); border-color: var(--navy);
+      color: white; box-shadow: 0 2px 8px rgba(22,41,74,0.25);
+    }
 
-    /* TRAJET BADGES */
+    /* ── TRAJET BADGES ── */
     .trajet-info { display: flex; gap: 10px; margin-top: 9px; flex-wrap: wrap; }
     .badge {
       background: var(--blue-light); border: 1px solid var(--blue-mid);
-      border-radius: 20px; padding: 5px 13px; font-size: 13px; font-weight: 600;
-      color: var(--blue); display: inline-flex; align-items: center; gap: 5px;
+      border-radius: 20px; padding: 5px 14px; font-size: 13px; font-weight: 600;
+      color: var(--navy); display: inline-flex; align-items: center; gap: 5px;
     }
     .badge.loading { opacity: 0.6; animation: pulse 1s infinite; }
-    .badge.error { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
+    .badge.error   { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
     .badge.success-green { background: #dcfce7; border-color: #86efac; color: var(--success); }
     @keyframes pulse { 0%,100% { opacity:.6 } 50% { opacity:1 } }
 
-    /* MATERIAUX */
+    /* ── MATÉRIAUX ── */
     .mat-header {
       display: grid; grid-template-columns: 1fr 130px 38px; gap: 8px;
       font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -123,103 +148,99 @@
     }
     .btn-remove:hover { background: #fca5a5; }
     .btn-add {
-      background: var(--blue-light); color: var(--blue);
-      border: 1.5px dashed var(--blue); border-radius: 8px;
+      background: var(--blue-light); color: var(--navy);
+      border: 1.5px dashed var(--blue); border-radius: 9px;
       padding: 9px; width: 100%; cursor: pointer; font-size: 14px;
       font-weight: 700; margin-top: 4px; transition: background 0.15s;
       font-family: inherit;
     }
     .btn-add:hover { background: var(--blue-mid); }
     .mat-total {
-      text-align: right; font-size: 15px; font-weight: 800; color: var(--blue);
+      text-align: right; font-size: 15px; font-weight: 800; color: var(--navy);
       margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--blue-light);
     }
 
-    /* BUTTONS */
+    /* ── BOUTONS ── */
     .btn-primary {
-      background: var(--blue); color: white; border: none; border-radius: 8px;
-      padding: 12px 26px; font-size: 15px; font-weight: 700; cursor: pointer;
-      transition: background 0.15s; font-family: inherit;
+      background: var(--navy); color: white; border: none; border-radius: 10px;
+      padding: 13px 28px; font-size: 15px; font-weight: 800; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+      box-shadow: 0 3px 10px rgba(22,41,74,0.3);
     }
-    .btn-primary:hover { background: var(--blue-dark); }
-    .btn-primary:disabled { background: var(--border); color: var(--gray); cursor: not-allowed; }
+    .btn-primary:hover { background: var(--red); box-shadow: 0 4px 14px rgba(212,45,40,0.35); }
+    .btn-primary:disabled { background: var(--border); color: var(--gray); cursor: not-allowed; box-shadow: none; }
     .btn-secondary {
-      background: white; color: var(--blue); border: 2px solid var(--blue);
-      border-radius: 8px; padding: 10px 22px; font-size: 15px; font-weight: 700;
+      background: white; color: var(--navy); border: 2px solid var(--navy);
+      border-radius: 10px; padding: 11px 22px; font-size: 15px; font-weight: 700;
       cursor: pointer; transition: all 0.15s; font-family: inherit;
     }
-    .btn-secondary:hover { background: var(--blue-light); }
+    .btn-secondary:hover { background: var(--blue-light); border-color: var(--blue); color: var(--blue); }
     .btn-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 22px; }
 
-    /* STEPS */
+    /* ── ÉTAPES ── */
     .steps {
       display: flex; align-items: center; justify-content: center;
-      gap: 6px; margin-bottom: 24px;
+      gap: 6px; margin-bottom: 26px;
     }
     .step-dot {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700; flex-shrink: 0;
+      font-size: 13px; font-weight: 800; flex-shrink: 0;
       background: var(--border); color: var(--gray);
     }
-    .step-dot.active { background: var(--blue); color: white; }
-    .step-dot.done { background: var(--success); color: white; }
-    .step-line { flex: 1; height: 2px; background: var(--border); max-width: 64px; }
+    .step-dot.active { background: var(--red); color: white; box-shadow: 0 2px 8px rgba(212,45,40,0.35); }
+    .step-dot.done   { background: var(--success); color: white; }
+    .step-line { flex: 1; height: 3px; background: var(--border); max-width: 72px; border-radius: 2px; }
     .step-line.done { background: var(--success); }
 
-    /* PREVIEW TABLE */
+    /* ── PREVIEW ── */
     .preview-section { margin-bottom: 16px; }
     .preview-section h4 {
       font-size: 11px; font-weight: 800; text-transform: uppercase;
-      letter-spacing: .6px; color: var(--blue);
-      margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--blue-light);
+      letter-spacing: .6px; color: var(--navy);
+      margin-bottom: 6px; padding-bottom: 4px;
+      border-bottom: 2px solid var(--blue-light);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .preview-section h4::before {
+      content: ''; display: block;
+      width: 3px; height: 13px;
+      background: var(--red); border-radius: 2px;
     }
     .preview-table { width: 100%; border-collapse: collapse; }
     .preview-table td { padding: 7px 10px; font-size: 14px; border-bottom: 1px solid var(--blue-light); }
     .preview-table td:first-child { font-weight: 600; color: var(--gray); width: 42%; }
     .preview-table tr:last-child td { border-bottom: none; }
 
-    /* SUCCESS */
-    .success-icon { font-size: 56px; text-align: center; margin: 8px 0 12px; }
+    /* ── SUCCÈS ── */
+    .success-icon  { font-size: 60px; text-align: center; margin: 8px 0 12px; }
     .success-title { font-size: 22px; font-weight: 800; color: var(--success); text-align: center; margin-bottom: 6px; }
-    .success-sub { text-align: center; color: var(--gray); font-size: 15px; line-height: 1.6; }
+    .success-sub   { text-align: center; color: var(--gray); font-size: 15px; line-height: 1.6; }
 
-    /* GOOGLE CALENDAR */
-    .event-list { display: flex; flex-direction: column; gap: 10px; }
-    .event-card {
-      border: 2px solid var(--border); border-radius: 10px;
-      padding: 14px 16px; cursor: pointer; transition: all 0.15s;
-    }
-    .event-card:hover { border-color: var(--blue); background: var(--blue-light); }
-    .event-card.selected { border-color: var(--blue); background: var(--blue-light); }
-    .event-title { font-weight: 700; font-size: 15px; }
-    .event-time { font-size: 12px; color: var(--gray); margin-top: 4px; }
-    .event-loc { font-size: 12px; color: var(--blue); margin-top: 3px; }
-
-    /* NOTE */
+    /* ── NOTES ── */
     .note {
       background: #fffbeb; border: 1px solid #fcd34d;
-      border-radius: 8px; padding: 12px 14px; font-size: 14px;
+      border-radius: 9px; padding: 12px 14px; font-size: 14px;
       color: #92400e; line-height: 1.5;
     }
     .info-box {
       background: var(--blue-light); border: 1px solid var(--blue-mid);
-      border-radius: 8px; padding: 10px 14px; font-size: 13px;
-      color: var(--blue); line-height: 1.5; margin-top: 6px;
+      border-radius: 9px; padding: 10px 14px; font-size: 13px;
+      color: var(--navy); line-height: 1.5; margin-top: 6px;
     }
     .duree-site-badge {
       background: #dcfce7; border: 1px solid #86efac;
-      border-radius: 8px; padding: 8px 14px; font-size: 14px;
+      border-radius: 9px; padding: 8px 14px; font-size: 14px;
       font-weight: 700; color: #166534; margin-top: 4px; margin-bottom: 8px;
       display: inline-flex; align-items: center; gap: 6px;
     }
 
-    /* AUTOCOMPLETE ADRESSE */
+    /* ── AUTOCOMPLETE ── */
     .ac-wrap { position: relative; flex: 1; }
     .ac-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
       background: white; border: 1.5px solid var(--blue);
-      border-radius: 10px; box-shadow: 0 6px 24px rgba(30,80,160,0.15);
+      border-radius: 10px; box-shadow: 0 6px 24px rgba(22,41,74,0.15);
       z-index: 200; max-height: 240px; overflow-y: auto;
     }
     .ac-item {
@@ -230,22 +251,32 @@
     .ac-item:last-child { border-bottom: none; }
     .ac-item:hover { background: var(--blue-light); }
     .ac-item-main { font-weight: 600; color: var(--text); }
-    .ac-item-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
-    .ac-loading { padding: 10px 13px; font-size: 13px; color: var(--gray); font-style: italic; }
+    .ac-item-sub  { font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .ac-loading   { padding: 10px 13px; font-size: 13px; color: var(--gray); font-style: italic; }
 
+    /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
       .mode-cards, .field-row, .field-row-3 { grid-template-columns: 1fr; }
-      .mat-header { grid-template-columns: 1fr 100px 38px; }
-      .materiau-row { grid-template-columns: 1fr 100px 38px; }
+      .mat-header    { grid-template-columns: 1fr 100px 38px; }
+      .materiau-row  { grid-template-columns: 1fr 100px 38px; }
+      .header-badge  { display: none; }
+      .header-brand  { font-size: 24px; }
     }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <div>
-    <div class="header-logo">⚡ ELECTREAU</div>
-    <div class="header-sub">Services électriques &amp; travaux — Bons d'intervention</div>
+  <div class="header-inner">
+    <div>
+      <div class="header-brand"><span class="brand-electr">ELECTR</span><span class="brand-eau">eau</span></div>
+      <div class="header-tagline">Pompage et Traitement de l'eau &nbsp;•&nbsp; Télégestion &nbsp;•&nbsp; Supervision</div>
+    </div>
+    <div class="header-badge">📋 Bons d'intervention</div>
+  </div>
+  <div class="header-bar">
+    <div class="header-bar-red"></div>
+    <div class="header-bar-blue"></div>
   </div>
 </div>
 
@@ -720,7 +751,17 @@ function renderForm() {
         <div class="field-row">
           <div class="field">
             <label>Technicien *</label>
-            <input type="text" id="technicien" value="${esc(f.technicien)}" placeholder="Votre nom" required>
+            <input type="text" id="technicien" list="techniciens-list"
+              value="${esc(f.technicien)}" placeholder="Sélectionner ou saisir..." required autocomplete="off">
+            <datalist id="techniciens-list">
+              <option value="François Armanet">
+              <option value="Loic Jaquet">
+              <option value="Maxime Morel">
+              <option value="Romain Durand">
+              <option value="Jerome Boulud">
+              <option value="Bastien Brochier">
+              <option value="Richard Besson">
+            </datalist>
           </div>
           <div class="field">
             <label>Date de l'intervention *</label>
