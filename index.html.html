@@ -301,6 +301,103 @@ const TECHNICIENS = [
   'Jerome Boulud','Bastien Brochier','Richard Besson'
 ];
 
+// ============================================================
+// POINT DE DÉPART — bureau / GPS / adresse libre
+// ============================================================
+async function getDepartCoords() {
+  const mode = state.form.departMode || 'bureau';
+  if (mode === 'gps' && state.form.departGpsCoords) return state.form.departGpsCoords;
+  if (mode === 'adresse' && state.form.departCustomCoords) return state.form.departCustomCoords;
+  if (!CONFIG.departCoords) await initDepartCoords();
+  return CONFIG.departCoords;
+}
+
+async function setDepartMode(mode) {
+  saveForm();
+  state.form.departMode = mode;
+  if (mode === 'gps' && !state.form.departGpsCoords) {
+    await fetchGpsCoords();
+  } else {
+    renderApp();
+  }
+}
+
+async function fetchGpsCoords() {
+  if (!navigator.geolocation) { alert('Géolocalisation non disponible sur ce navigateur.'); return; }
+  state.isLoadingGps = true;
+  renderApp();
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 12000, enableHighAccuracy: true })
+    );
+    state.form.departGpsCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+  } catch(e) {
+    state.form.departGpsCoords = null;
+    alert('Impossible de récupérer votre position. Vérifiez les permissions de géolocalisation.');
+  }
+  state.isLoadingGps = false;
+  renderApp();
+}
+
+let departAcTimer = null;
+function onDepartInput(val) {
+  state.form.departCustomAddress = val;
+  state.form.departCustomCoords = null;
+  clearTimeout(departAcTimer);
+  if (val.length < 3) { hideDepartAc(); return; }
+  departAcTimer = setTimeout(() => fetchDepartAcSuggestions(val), 300);
+}
+
+async function fetchDepartAcSuggestions(q) {
+  const feats = await banSearch(q, { limit: 5 });
+  const dd = document.getElementById('depart-ac-dropdown');
+  if (!dd) return;
+  if (!feats.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = feats.map((ft, i) =>
+    '<div class="ac-item" onclick="selectDepartSuggestion(' + i + ')">'
+    + '<div class="ac-item-main">' + esc(ft.properties.label) + '</div>'
+    + '<div class="ac-item-sub">' + esc(ft.properties.context || '') + '</div></div>'
+  ).join('');
+  dd.style.display = 'block';
+  dd._feats = feats;
+}
+
+function selectDepartSuggestion(i) {
+  const dd = document.getElementById('depart-ac-dropdown');
+  if (!dd || !dd._feats) return;
+  const feat = dd._feats[i];
+  state.form.departCustomAddress = feat.properties.label;
+  state.form.departCustomCoords  = { lat: feat.geometry.coordinates[1], lon: feat.geometry.coordinates[0] };
+  dd.style.display = 'none';
+  renderApp();
+}
+
+function hideDepartAc() {
+  const dd = document.getElementById('depart-ac-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function renderDepartInfo(f) {
+  if (f.departMode === 'gps') {
+    if (state.isLoadingGps) return '<div class="badge loading">📍 Localisation en cours…</div>';
+    if (f.departGpsCoords) return '<div class="badge success-green">✓ Position GPS obtenue</div>';
+    return '<div class="badge error">⚠️ Position non disponible'
+      + ' <button type="button" onclick="fetchGpsCoords()" style="background:none;border:none;color:inherit;cursor:pointer;text-decoration:underline;font-size:inherit;">Réessayer</button></div>';
+  }
+  if (f.departMode === 'adresse') {
+    let html = '<div class="ac-wrap" style="margin-top:8px">'
+      + '<input type="text" id="depart-custom" value="' + esc(f.departCustomAddress) + '"'
+      + ' placeholder=\"Ex: 12 rue de la Paix, Lyon\" autocomplete=\"off\"'
+      + ' oninput=\"onDepartInput(this.value)\">'
+      + '<div id=\"depart-ac-dropdown\" class=\"ac-dropdown\" style=\"display:none\"></div>'
+      + '</div>';
+    if (f.departCustomCoords) html += '<div class="badge success-green" style="margin-top:6px">✓ Adresse localisée</div>';
+    return html;
+  }
+  // bureau (défaut)
+  return '<div class="info-box" style="margin-top:8px">🏢 ' + esc(CONFIG.departAddress) + '</div>';
+}
+
 function renderTechnicienField(f) {
   const techInList = TECHNICIENS.includes(f.technicien);
   const sel = techInList ? f.technicien : (f.technicien ? '__autre__' : '');
@@ -334,6 +431,7 @@ let state = {
   form: newForm(),
   isLoadingTrajet: false,
   trajetError: null,
+  isLoadingGps: false,
 };
 
 function newForm() {
@@ -355,6 +453,10 @@ function newForm() {
     trajetMin:      null,   // minutes aller-retour calculés
     dureeSiteMin:   null,   // minutes sur site calculées
     adresseCoords:  null,   // {lat, lon} quand sélection autocomplétion
+    departMode:     'bureau',   // 'bureau' | 'gps' | 'adresse'
+    departGpsCoords: null,
+    departCustomAddress: '',
+    departCustomCoords: null,
   };
 }
 
@@ -451,16 +553,13 @@ async function calculateTrajet(adresse) {
   state.trajetError = null;
   renderApp();
   try {
-    // S'assurer que les coordonnées de départ sont initialisées
-    if (!CONFIG.departCoords) await initDepartCoords();
+    // Coordonnées de départ selon le mode choisi
+    const departC = await getDepartCoords();
 
     // Coordonnées destination : depuis autocomplétion BAN (précis) ou géocodage BAN
     const dest = state.form.adresseCoords || await geocode(adresse);
 
-    const route = await osrmRoute(
-      CONFIG.departCoords.lat, CONFIG.departCoords.lon,
-      dest.lat, dest.lon
-    );
+    const route = await osrmRoute(departC.lat, departC.lon, dest.lat, dest.lon);
     state.form.km          = Math.round(route.distanceM / 100) / 10 * 2; // km A/R
     state.form.trajetMin   = Math.round(route.durationS / 60) * 2;        // min A/R
   } catch(err) {
@@ -778,6 +877,18 @@ function renderForm() {
   app.innerHTML = `
     ${steps(1)}
     <form id="bon-form" onsubmit="submitForm(event)">
+
+      <div class="card">
+        <div class="card-title">🚀 Point de départ</div>
+        <div class="field">
+          <div class="toggle-group">
+            <button type="button" class="toggle-btn ${f.departMode==='bureau'?'active':''}" onclick="setDepartMode('bureau')">🏢 Bureau</button>
+            <button type="button" class="toggle-btn ${f.departMode==='gps'?'active':''}" onclick="setDepartMode('gps')">📍 Ma position</button>
+            <button type="button" class="toggle-btn ${f.departMode==='adresse'?'active':''}" onclick="setDepartMode('adresse')">✏️ Adresse</button>
+          </div>
+          ${renderDepartInfo(f)}
+        </div>
+      </div>
 
       <div class="card">
         <div class="card-title">👤 Informations générales</div>
@@ -1116,7 +1227,7 @@ function doGenerate() {
 }
 
 function nouveauBon() {
-  state = { step: 1, form: newForm(), isLoadingTrajet: false, trajetError: null };
+  state = { step: 1, form: newForm(), isLoadingTrajet: false, trajetError: null, isLoadingGps: false };
   renderApp();
 }
 
