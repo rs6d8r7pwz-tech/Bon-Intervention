@@ -301,6 +301,21 @@ const TECHNICIENS = [
   'Jerome Boulud','Bastien Brochier','Richard Besson'
 ];
 
+function renderTechnicienField(f) {
+  const techInList = TECHNICIENS.includes(f.technicien);
+  const sel = techInList ? f.technicien : (f.technicien ? '__autre__' : '');
+  let opts = '<option value="">\u2014 S\u00e9lectionner un technicien \u2014</option>';
+  TECHNICIENS.forEach(function(t) {
+    opts += '<option value="' + esc(t) + '"' + (sel === t ? ' selected' : '') + '>' + t + '</option>';
+  });
+  opts += '<option value="__autre__"' + (sel === '__autre__' ? ' selected' : '') + '>\u270f\ufe0f Autre (saisie libre)</option>';
+  const showInput = sel === '__autre__' ? 'block' : 'none';
+  return '<select id="technicien-select" onchange="onTechSelect(this.value)" style="margin-bottom:8px">'
+    + opts + '</select>'
+    + '<input type="text" id="technicien" style="display:' + showInput + ';margin-top:6px" '
+    + 'value="' + esc(f.technicien) + '" placeholder="Saisir le nom du technicien">';
+}
+
 function onTechSelect(val) {
   const input = document.getElementById('technicien');
   if (val === '__autre__') {
@@ -769,18 +784,7 @@ function renderForm() {
         <div class="field-row">
           <div class="field">
             <label>Technicien *</label>
-            ${(()=>{
-              const techInList = TECHNICIENS.includes(f.technicien);
-              const sel = techInList ? f.technicien : (f.technicien ? '__autre__' : '');
-              return \`<select id="technicien-select" onchange="onTechSelect(this.value)" style="margin-bottom:8px">
-                <option value="">— Sélectionner un technicien —</option>
-                \${TECHNICIENS.map(t=>\`<option value="\${t}" \${sel===t?'selected':''}>\${t}</option>\`).join('')}
-                <option value="__autre__" \${sel==='__autre__'?'selected':''}>✏️ Autre (saisie libre)</option>
-              </select>
-              <input type="text" id="technicien"
-                style="display:\${sel==='__autre__'?'block':'none'}"
-                value="\${esc(f.technicien)}" placeholder="Saisir le nom du technicien">\`;
-            })()}
+            ${renderTechnicienField(f)}
           </div>
           <div class="field">
             <label>Date de l'intervention *</label>
