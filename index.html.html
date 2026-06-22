@@ -541,11 +541,13 @@ async function initDepartCoords() {
 }
 
 async function osrmRoute(lat1, lon1, lat2, lon2) {
-  const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+  // alternatives=3 : on demande plusieurs itinéraires puis on garde le PLUS COURT en distance
+  const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false&alternatives=3`;
   const r = await fetch(url);
   const data = await r.json();
-  if (data.code !== 'Ok') throw new Error("Impossible de calculer le trajet");
-  return { distanceM: data.routes[0].distance, durationS: data.routes[0].duration };
+  if (data.code !== 'Ok' || !data.routes || !data.routes.length) throw new Error("Impossible de calculer le trajet");
+  const best = data.routes.reduce((a, b) => (b.distance < a.distance ? b : a));
+  return { distanceM: best.distance, durationS: best.duration };
 }
 
 async function calculateTrajet(adresse) {
@@ -617,218 +619,184 @@ function generatePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
   const f = state.form;
-  const ML = 15, MR = 15, PW = 210 - ML - MR;
+  const ML = 18, MR = 18, PW = 210 - ML - MR, RX = 210 - MR;
   let y = 0;
 
-  // Palette premium Electreau
-  const NAVY      = [22, 45, 85];       // bleu marine profond — en-tête, titres
-  const RED       = [215, 45, 40];      // rouge vif lumineux — ELECTR, accents
-  const BLUE      = [0, 165, 215];      // bleu clair vif — eau, sections
-  const BL_LIGHT  = [242, 248, 253];    // fond très clair sections
-  const BL_PALE   = [249, 253, 255];    // fond champs alternés
-  const GRAY      = [70, 70, 70];       // texte labels
-  const LGRAY     = [140, 140, 140];    // texte secondaire
-  const WHITE     = [255, 255, 255];
-  const YELLOW_BG = [255, 252, 230];
+  // ── Palette claire & premium ──
+  const INK   = [38, 45, 58];
+  const NAVY  = [28, 54, 98];
+  const RED   = [214, 54, 46];
+  const BLUE  = [0, 150, 205];
+  const GRAY  = [112, 120, 132];
+  const LGRAY = [156, 162, 172];
+  const HAIR  = [228, 231, 236];
+  const T_BLUE= [246, 250, 253];
+  const T_AMB = [255, 250, 234];
+  const WHITE = [255, 255, 255];
 
-  // — BANDEAU HEADER — bleu marine + ELECTR rouge + eau bleu
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, 210, 32, 'F');
-  // Bande décorative rouge fine en bas du header
-  doc.setFillColor(...RED);
-  doc.rect(0, 29, 105, 3, 'F');
-  doc.setFillColor(...BLUE);
-  doc.rect(105, 29, 105, 3, 'F');
-  // Texte logo
-  doc.setFont('helvetica','bold'); doc.setFontSize(24);
-  doc.setTextColor(...RED);
-  doc.text('ELECTR', ML, 18);
-  const electrW = doc.getTextWidth('ELECTR');
-  doc.setTextColor(...BLUE);
-  doc.text('eau', ML + electrW, 18);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-  doc.setTextColor(175, 215, 235);
-  doc.text("Pompage et Traitement de l'eau  •  Télégestion  •  Supervision", ML, 26);
-  doc.setTextColor(0, 0, 0);
-  y = 42;
+  function hair(yy, x1, x2, c, w) {
+    doc.setDrawColor(...(c||HAIR)); doc.setLineWidth(w||0.25);
+    doc.line(x1||ML, yy, x2||RX, yy);
+    doc.setDrawColor(0); doc.setLineWidth(0.2);
+  }
+  function checkBreak(h) { if (y + (h||20) > 280) { doc.addPage(); y = 22; } }
 
-  // — TITRE + N° —
-  doc.setFont('helvetica','bold'); doc.setFontSize(14);
-  doc.setTextColor(...NAVY);
-  doc.text("BON D'INTERVENTION", ML, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.setTextColor(...LGRAY);
-  doc.text(`N° ${f.numero}`, 210-MR, y, {align:'right'});
-  y += 3.5;
-  // Ligne bicolore rouge → bleu
-  const mid = ML + (210 - ML - MR) / 2;
-  doc.setDrawColor(...RED); doc.setLineWidth(0.7);
-  doc.line(ML, y, mid, y);
-  doc.setDrawColor(...BLUE);
-  doc.line(mid, y, 210-MR, y);
-  y += 7; doc.setDrawColor(0); doc.setLineWidth(0.2);
+  // ── Bandeau de marque (fin, lumineux) ──
+  doc.setFillColor(...RED);  doc.rect(0, 0, 105, 2.5, 'F');
+  doc.setFillColor(...BLUE); doc.rect(105, 0, 105, 2.5, 'F');
+
+  // Logo
+  doc.setFont('helvetica','bold'); doc.setFontSize(27);
+  doc.setTextColor(...RED);  doc.text('ELECTR', ML, 18);
+  const ew = doc.getTextWidth('ELECTR');
+  doc.setTextColor(...BLUE); doc.text('eau', ML + ew, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+  doc.text("Pompage et traitement de l'eau     Télégestion     Supervision", ML, 24.5);
+
+  // Bloc droite : type / n° / date
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...NAVY);
+  doc.text("BON D'INTERVENTION", RX, 12.5, { align:'right', charSpace:0.4 });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+  doc.text(`N°  ${f.numero || '—'}`, RX, 18.5, { align:'right' });
+  doc.text(fmtDate(f.date) || '—', RX, 24.5, { align:'right' });
+
+  hair(30, ML, RX, HAIR, 0.4);
+  y = 40;
 
   function sectionTitle(title) {
-    // Fond très clair
-    doc.setFillColor(...BL_LIGHT);
-    doc.rect(ML, y, PW, 7, 'F');
-    // Liseré marine à gauche
-    doc.setFillColor(...NAVY);
-    doc.rect(ML, y, 3, 7, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.setTextColor(...NAVY);
-    doc.text(`    ${title.toUpperCase()}`, ML + 2, y + 5);
-    doc.setTextColor(0); doc.setLineWidth(0.2);
-    y += 9;
+    checkBreak(18);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...NAVY);
+    doc.text(title.toUpperCase(), ML, y, { charSpace:0.5 });
+    doc.setFillColor(...BLUE); doc.rect(ML, y + 1.8, 16, 1, 'F');
+    y += 8.5;
   }
 
-  function field(label, value, opts={}) {
-    const lw = opts.lw||55, fill=opts.fill;
-    if (fill) { doc.setFillColor(...BL_PALE); doc.rect(ML,y,PW,6.5,'F'); }
-    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-    doc.setTextColor(...GRAY);
-    doc.text(`${label} :`, ML+2, y+4.5);
-    doc.setFont('helvetica','normal'); doc.setTextColor(0);
-    // handle multiline
-    const lines = doc.splitTextToSize(String(value||'—'), PW-lw-2);
-    doc.text(lines, ML+lw, y+4.5);
-    y += Math.max(6.5, lines.length*6);
+  // Champ pleine largeur (label au-dessus, valeur en dessous)
+  function field(label, value) {
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+    doc.text(label.toUpperCase(), ML, y + 3.5, { charSpace:0.3 });
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...INK);
+    const lines = doc.splitTextToSize(String(value || '—'), PW);
+    doc.text(lines, ML, y + 9.5);
+    const h = 11.5 + (lines.length - 1) * 5.8;
+    hair(y + h);
+    y += h + 1.5;
   }
 
-  // Saut de page préventif
-  function checkBreak(h=20) {
-    if (y + h > 275) { doc.addPage(); y = 20; }
+  // Deux champs côte à côte
+  function twoFields(l1, v1, l2, v2) {
+    const hw = PW / 2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+    doc.text(l1.toUpperCase(), ML, y + 3.5, { charSpace:0.3 });
+    doc.text(l2.toUpperCase(), ML + hw, y + 3.5, { charSpace:0.3 });
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...INK);
+    doc.text(doc.splitTextToSize(String(v1 || '—'), hw - 4)[0], ML, y + 9.5);
+    doc.text(doc.splitTextToSize(String(v2 || '—'), hw - 4)[0], ML + hw, y + 9.5);
+    hair(y + 11.5);
+    y += 13;
   }
 
-  function twoFields(l1,v1,l2,v2, lw=48) {
-    const hw = PW/2;               // 90mm par colonne
-    const maxV = hw - lw - 2;      // largeur max pour la valeur
-    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-    doc.setTextColor(...GRAY);
-    doc.text(`${l1} :`, ML+2, y+4.5);
-    doc.setFont('helvetica','normal'); doc.setTextColor(0);
-    // Clip valeur col 1 à 1 ligne
-    const v1s = doc.splitTextToSize(String(v1||'—'), maxV);
-    doc.text(v1s[0], ML+lw, y+4.5);
-    doc.setFont('helvetica','bold'); doc.setTextColor(...GRAY);
-    doc.text(`${l2} :`, ML+hw+2, y+4.5);
-    doc.setFont('helvetica','normal'); doc.setTextColor(0);
-    const v2s = doc.splitTextToSize(String(v2||'—'), maxV);
-    doc.text(v2s[0], ML+hw+lw, y+4.5);
-    y += 6.5;
-  }
-
-  // — CLIENT —
-  checkBreak(35);
-  sectionTitle("Informations client");
-  field("Client", f.client, {fill:true});
+  // ── CLIENT ──
+  sectionTitle('Informations client');
+  field('Client', f.client);
   field("Adresse d'intervention", f.adresse);
-  twoFields("Date", fmtDate(f.date), "Technicien", f.technicien);
-  y += 2;
+  twoFields('Date', fmtDate(f.date), 'Technicien', f.technicien);
+  y += 3;
 
-  // — MISSION —
-  checkBreak(25);
-  sectionTitle("Mission effectuée");
-  doc.setFillColor(...BL_PALE);
-  const descLines = doc.splitTextToSize(f.description||'—', PW-6);
-  const dh = Math.max(10, descLines.length*5.5+5);
-  doc.rect(ML, y, PW, dh, 'F');
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.setTextColor(0);
-  doc.text(descLines, ML+3, y+4.5);
-  y += dh+2;
+  // ── MISSION ──
+  sectionTitle('Mission effectuée');
+  const descLines = doc.splitTextToSize(f.description || '—', PW - 8);
+  const dh = Math.max(16, descLines.length * 5.9 + 9);
+  checkBreak(dh + 4);
+  doc.setFillColor(...T_BLUE); doc.roundedRect(ML, y, PW, dh, 2, 2, 'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...INK);
+  doc.text(descLines, ML + 4, y + 7.5);
+  y += dh + 5;
 
-  // — REMARQUES —
+  // ── REMARQUES ──
   if (f.hasRemarques && f.remarques) {
-    checkBreak(20);
-    sectionTitle("Remarques");
-    doc.setFillColor(...YELLOW_BG);
-    const remLines = doc.splitTextToSize(f.remarques, PW-6);
-    const rh = Math.max(10, remLines.length*5.5+5);
-    doc.rect(ML, y, PW, rh, 'F');
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text(remLines, ML+3, y+4.5);
-    y += rh+2;
+    sectionTitle('Remarques');
+    const remLines = doc.splitTextToSize(f.remarques, PW - 8);
+    const rh = Math.max(14, remLines.length * 5.9 + 9);
+    checkBreak(rh + 4);
+    doc.setFillColor(...T_AMB); doc.roundedRect(ML, y, PW, rh, 2, 2, 'F');
+    doc.setFillColor(245, 200, 70); doc.rect(ML, y, 1.6, rh, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...INK);
+    doc.text(remLines, ML + 5, y + 7.5);
+    y += rh + 5;
   }
-  y += 1;
 
-  // — DÉPLACEMENT —
-  checkBreak(30);
-  sectionTitle("Déplacement");
+  // ── DÉPLACEMENT ──
+  sectionTitle('Déplacement');
   twoFields(
-    "Distance A/R", f.km!=null ? `${f.km} km` : '—',
-    "Durée trajet A/R", f.trajetMin!=null ? fmtDuree(f.trajetMin) : '—'
+    'Distance A/R', f.km != null ? `${f.km} km` : '—',
+    'Durée trajet A/R', f.trajetMin != null ? fmtDuree(f.trajetMin) : '—'
   );
-  twoFields("Heure d'arrivée", f.heureArrivee||'—', "Heure de départ", f.heureDepart||'—');
-  if (f.dureeSiteMin) field("Durée sur site", fmtDuree(f.dureeSiteMin), {fill:true});
-  y += 2;
+  twoFields("Heure d'arrivée", f.heureArrivee || '—', 'Heure de départ', f.heureDepart || '—');
+  if (f.dureeSiteMin) field('Durée sur site', fmtDuree(f.dureeSiteMin));
+  y += 3;
 
-  // — MATÉRIEL —
-  checkBreak(25);
-  sectionTitle("Matériel utilisé");
-  const mats = f.materiaux.filter(m=>m.designation);
+  // ── MATÉRIEL ──
+  sectionTitle('Matériel utilisé');
+  const mats = f.materiaux.filter(m => m.designation);
   if (!mats.length) {
-    doc.setFont('helvetica','italic'); doc.setFontSize(9);
-    doc.setTextColor(...LGRAY);
-    doc.text('Néant', ML+3, y+4.5); doc.setTextColor(0);
-    y += 7;
+    doc.setFont('helvetica','italic'); doc.setFontSize(10.5); doc.setTextColor(...LGRAY);
+    doc.text('Néant', ML, y + 5); doc.setTextColor(...INK);
+    y += 9;
   } else {
-    // header row
-    doc.setFillColor(...NAVY);
-    doc.rect(ML, y, PW, 6.5, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-    doc.setTextColor(...WHITE);
-    doc.text('  Désignation', ML+2, y+4.5);
-    doc.text('Montant', 210-MR-2, y+4.5, {align:'right'});
-    doc.setTextColor(0);
-    y += 6.5;
+    checkBreak(16);
+    doc.setFillColor(247, 249, 251); doc.rect(ML, y, PW, 8.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...NAVY);
+    doc.text('DÉSIGNATION', ML + 3, y + 5.6, { charSpace:0.3 });
+    doc.text('MONTANT', RX - 3, y + 5.6, { align:'right', charSpace:0.3 });
+    hair(y + 8.5, ML, RX, BLUE, 0.6);
+    y += 8.5;
 
-    mats.forEach((m,i) => {
-      // désignation peut être longue — wrap + hauteur dynamique
-      const desigLines = doc.splitTextToSize(`  – ${m.designation||''}`, PW - 48);
-      const rowH = Math.max(6.5, desigLines.length*5.5+2);
+    mats.forEach(m => {
+      const dl = doc.splitTextToSize(m.designation || '', PW - 46);
+      const rowH = Math.max(8.5, dl.length * 5.8 + 3);
       checkBreak(rowH);
-      if (i%2===0) { doc.setFillColor(...BL_PALE); doc.rect(ML,y,PW,rowH,'F'); }
-      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(0);
-      doc.text(desigLines, ML+2, y+4.3);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(...INK);
+      doc.text(dl, ML + 3, y + 5.6);
       const p = parseFloat(m.prix);
-      if (!isNaN(p)) doc.text(`${p.toFixed(2)} €`, 210-MR-2, y+4.3, {align:'right'});
+      if (!isNaN(p)) doc.text(`${p.toFixed(2)} €`, RX - 3, y + 5.6, { align:'right' });
+      hair(y + rowH);
       y += rowH;
     });
 
-    // total
     const tot = totalMat();
-    doc.setFillColor(...RED);
-    doc.rect(ML, y, PW, 8, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    doc.setTextColor(...WHITE);
-    doc.text('  TOTAL MATÉRIAUX', ML+2, y+5.8);
-    doc.text(`${tot.toFixed(2)} €`, 210-MR, y+5.8, {align:'right'});
-    doc.setTextColor(0);
-    y += 10;
+    y += 2;
+    checkBreak(13);
+    doc.setFillColor(...T_BLUE); doc.roundedRect(ML, y, PW, 11, 1.5, 1.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...NAVY);
+    doc.text('TOTAL MATÉRIEL', ML + 4, y + 7, { charSpace:0.4 });
+    doc.setFontSize(12); doc.setTextColor(...RED);
+    doc.text(`${tot.toFixed(2)} €`, RX - 4, y + 7, { align:'right' });
+    y += 13;
   }
   y += 4;
 
-  // — SIGNATURES —
-  if (y > 234) { doc.addPage(); y = 20; }
-  sectionTitle("Signatures");
-  y += 2;
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-  doc.setTextColor(...GRAY);
-  doc.text('Signature du technicien :', ML, y+4);
-  doc.text('Signature du client (bon pour accord) :', ML+95, y+4);
-  y += 22;
-  doc.setDrawColor(100); doc.setLineWidth(0.3);
-  doc.line(ML, y, ML+72, y);
-  doc.line(ML+95, y, 210-MR, y);
+  // ── SIGNATURES ──
+  if (y > 232) { doc.addPage(); y = 22; }
+  sectionTitle('Signatures');
+  y += 1;
+  const boxW = (PW - 10) / 2, boxH = 26;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+  doc.text('LE TECHNICIEN', ML, y, { charSpace:0.3 });
+  doc.text('LE CLIENT  (bon pour accord)', ML + boxW + 10, y, { charSpace:0.3 });
+  y += 2.5;
+  doc.setDrawColor(...HAIR); doc.setLineWidth(0.4);
+  doc.roundedRect(ML, y, boxW, boxH, 2, 2, 'S');
+  doc.roundedRect(ML + boxW + 10, y, boxW, boxH, 2, 2, 'S');
+  doc.setDrawColor(0); doc.setLineWidth(0.2);
 
-  // — PIED DE PAGE —
-  doc.setFont('helvetica','italic'); doc.setFontSize(7);
-  doc.setTextColor(150);
+  // ── PIED DE PAGE ──
   const now = new Date();
+  hair(287, ML, RX, HAIR, 0.25);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...LGRAY);
   doc.text(
-    `Document généré le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} — Electreau`,
-    105, 291, {align:'center'}
+    `Electreau   |   Document généré le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,
+    105, 291, { align:'center' }
   );
 
   const fn = `bon_${(f.client||'client').replace(/\s+/g,'_')}_${f.date||today()}.pdf`;
@@ -1231,12 +1199,14 @@ function nouveauBon() {
   renderApp();
 }
 
+// ===============================================
+
 // ============================================================
-// INIT
+// DÉMARRAGE DE L'APPLICATION
 // ============================================================
-// Pré-charge les coordonnées de départ (BAN) et au démarrage
-initDepartCoords();
-renderApp();
+initDepartCoords();   // pré-charge les coordonnées de départ (BAN)
+renderApp();          // affiche l'interface
+
 </script>
 </body>
 </html>
