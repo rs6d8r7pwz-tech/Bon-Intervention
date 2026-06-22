@@ -407,6 +407,51 @@ function renderDepartInfo(f) {
   return '<div class="info-box" style="margin-top:8px">🏢 ' + esc(CONFIG.departAddress) + '</div>';
 }
 
+function setModeIntervention(mode) {
+  saveForm();
+  state.form.modeIntervention = mode;
+  if (mode === 'distance') {
+    state.form.km = null;
+    state.form.trajetMin = null;
+    state.trajetError = null;
+    state.form.adresse = '';
+    state.form.adresseCoords = null;
+  }
+  renderApp();
+}
+
+function renderLieuBlock(f) {
+  if (f.modeIntervention === 'distance') {
+    return '<div class="info-box" style="margin-top:4px">🛜 Intervention réalisée à distance depuis nos locaux — aucun déplacement.</div>';
+  }
+  let trajet;
+  if (state.isLoadingTrajet) {
+    trajet = '<span class="badge loading">⏳ Calcul en cours…</span>';
+  } else if (f.km !== null) {
+    trajet = '<span class="badge">🚗 ' + f.km + ' km A/R</span><span class="badge">⏱️ ' + fmtDuree(f.trajetMin) + ' A/R</span>';
+  } else if (state.trajetError) {
+    trajet = '<span class="badge error">⚠️ ' + esc(state.trajetError) + '</span>';
+  } else {
+    trajet = '<span style="font-size:12px;color:var(--gray);margin-top:6px;">Départ : ' + esc(CONFIG.departAddress) + '</span>';
+  }
+  return '<label>Adresse d\'intervention *</label>'
+    + '<div style="display:flex;gap:8px;align-items:flex-start">'
+    +   '<div class="ac-wrap">'
+    +     '<input type="text" id="adresse" value="' + esc(f.adresse) + '" '
+    +       'placeholder="Ex: Creys-Mépieu, mairie de Morestel, 3 chemin des…" '
+    +       'style="width:100%" required autocomplete="off" '
+    +       'oninput="onAdresseInput(this.value)" '
+    +       'onblur="setTimeout(()=>closeAcDropdown(),180)">'
+    +     '<div class="ac-dropdown" id="ac-dropdown" style="display:none"></div>'
+    +   '</div>'
+    +   '<button type="button" onclick="lancerCalculTrajet()" class="btn-primary" '
+    +     'style="padding:10px 13px;white-space:nowrap;font-size:13px;flex-shrink:0">'
+    +     (state.isLoadingTrajet ? '⏳' : '📍 Calculer trajet')
+    +   '</button>'
+    + '</div>'
+    + '<div class="trajet-info">' + trajet + '</div>';
+}
+
 function renderTechnicienField(f) {
   const techInList = TECHNICIENS.includes(f.technicien);
   const sel = techInList ? f.technicien : (f.technicien ? '__autre__' : '');
@@ -452,6 +497,7 @@ function newForm() {
     date:           today(),
     client:         '',
     adresse:        '',
+    modeIntervention: 'site',  // 'site' | 'distance'
     heureArrivee:   '',
     heureDepart:    '',
     description:    '',
@@ -713,7 +759,7 @@ function generatePDF() {
   // ── CLIENT ──
   sectionTitle('Informations client');
   field('Client', f.client);
-  field("Adresse d'intervention", f.adresse);
+  if (f.modeIntervention !== 'distance') field("Adresse d'intervention", f.adresse);
   twoFields('Date', fmtDate(f.date), 'Technicien', f.technicien);
   y += 3;
 
@@ -740,14 +786,21 @@ function generatePDF() {
     y += rh + 5;
   }
 
-  // ── DÉPLACEMENT ──
-  sectionTitle('Déplacement');
-  twoFields(
-    'Distance A/R', f.km != null ? `${f.km} km` : '—',
-    'Durée trajet A/R', f.trajetMin != null ? fmtDuree(f.trajetMin) : '—'
-  );
-  twoFields("Heure d'arrivée", f.heureArrivee || '—', 'Heure de départ', f.heureDepart || '—');
-  if (f.dureeSiteMin) field('Durée sur site', fmtDuree(f.dureeSiteMin));
+  // ── DÉPLACEMENT / INTERVENTION ──
+  if (f.modeIntervention === 'distance') {
+    sectionTitle('Intervention à distance');
+    field('Type', 'À distance — réalisée depuis nos locaux (aucun déplacement)');
+    twoFields('Heure de début', f.heureArrivee || '—', 'Heure de fin', f.heureDepart || '—');
+    if (f.dureeSiteMin) field("Durée d'intervention", fmtDuree(f.dureeSiteMin));
+  } else {
+    sectionTitle('Déplacement');
+    twoFields(
+      'Distance A/R', f.km != null ? `${f.km} km` : '—',
+      'Durée trajet A/R', f.trajetMin != null ? fmtDuree(f.trajetMin) : '—'
+    );
+    twoFields("Heure d'arrivée", f.heureArrivee || '—', 'Heure de départ', f.heureDepart || '—');
+    if (f.dureeSiteMin) field('Durée sur site', fmtDuree(f.dureeSiteMin));
+  }
   y += 3;
 
   // ── MATÉRIEL ──
@@ -899,43 +952,24 @@ function renderForm() {
       <div class="card">
         <div class="card-title">📍 Lieu &amp; horaires</div>
         <div class="field">
-          <label>Adresse d'intervention *</label>
-          <div style="display:flex;gap:8px;align-items:flex-start">
-            <div class="ac-wrap">
-              <input type="text" id="adresse" value="${esc(f.adresse)}"
-                placeholder="Ex: Creys-Mépieu, mairie de Morestel, 3 chemin des…"
-                style="width:100%" required autocomplete="off"
-                oninput="onAdresseInput(this.value)"
-                onblur="setTimeout(()=>closeAcDropdown(),180)">
-              <div class="ac-dropdown" id="ac-dropdown" style="display:none"></div>
-            </div>
-            <button type="button" onclick="lancerCalculTrajet()" class="btn-primary"
-              style="padding:10px 13px;white-space:nowrap;font-size:13px;flex-shrink:0">
-              ${state.isLoadingTrajet ? '⏳' : '📍 Calculer trajet'}
-            </button>
+          <div class="toggle-group" style="margin-bottom:12px">
+            <button type="button" class="toggle-btn ${f.modeIntervention!=='distance'?'active':''}" onclick="setModeIntervention('site')">🏠 Sur site</button>
+            <button type="button" class="toggle-btn ${f.modeIntervention==='distance'?'active':''}" onclick="setModeIntervention('distance')">🛜 À distance</button>
           </div>
-          <div class="trajet-info">
-            ${state.isLoadingTrajet
-              ? `<span class="badge loading">⏳ Calcul en cours…</span>`
-              : f.km !== null
-                ? `<span class="badge">🚗 ${f.km} km A/R</span><span class="badge">⏱️ ${fmtDuree(f.trajetMin)} A/R</span>`
-                : state.trajetError
-                  ? `<span class="badge error">⚠️ ${esc(state.trajetError)}</span>`
-                  : `<span style="font-size:12px;color:var(--gray);margin-top:6px;">Départ : ${esc(CONFIG.departAddress)}</span>`}
-          </div>
+          ${renderLieuBlock(f)}
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Heure d'arrivée sur site</label>
+            <label>${f.modeIntervention==='distance' ? 'Heure de début intervention' : "Heure d'arrivée sur site"}</label>
             <input type="time" id="heureArrivee" value="${esc(f.heureArrivee)}" onchange="updateDureeSite()">
           </div>
           <div class="field">
-            <label>Heure de départ du site</label>
+            <label>${f.modeIntervention==='distance' ? 'Heure de fin intervention' : 'Heure de départ du site'}</label>
             <input type="time" id="heureDepart" value="${esc(f.heureDepart)}" onchange="updateDureeSite()">
           </div>
         </div>
         <div id="duree-site-display">
-          ${dsm ? `<div class="duree-site-badge">⏱️ Durée sur site : ${fmtDuree(dsm)}</div>` : ''}
+          ${dsm ? `<div class="duree-site-badge">⏱️ ${f.modeIntervention==='distance' ? "Durée d'intervention" : 'Durée sur site'} : ${fmtDuree(dsm)}</div>` : ''}
         </div>
       </div>
 
@@ -1005,17 +1039,17 @@ function renderPreview() {
           <tr><td>Technicien</td><td>${esc(f.technicien)}</td></tr>
           <tr><td>Date</td><td>${fmtDate(f.date)}</td></tr>
           <tr><td>Client</td><td>${esc(f.client)}</td></tr>
-          <tr><td>Adresse</td><td>${esc(f.adresse)}</td></tr>
+          ${f.modeIntervention==='distance' ? '<tr><td>Type</td><td>🛜 À distance (depuis nos locaux)</td></tr>' : `<tr><td>Adresse</td><td>${esc(f.adresse)}</td></tr>`}
         </table>
       </div>
 
       <div class="preview-section">
-        <h4>Déplacement &amp; présence sur site</h4>
+        <h4>${f.modeIntervention==='distance' ? 'Intervention à distance' : 'Déplacement &amp; présence sur site'}</h4>
         <table class="preview-table">
-          <tr><td>Kilométrage A/R</td><td>${f.km!=null ? f.km+' km' : '<span style="color:var(--gray);font-style:italic">Non calculé</span>'}</td></tr>
-          <tr><td>Temps de trajet A/R</td><td>${f.trajetMin!=null ? fmtDuree(f.trajetMin) : '—'}</td></tr>
-          <tr><td>Heure arrivée → départ</td><td>${f.heureArrivee||'—'} → ${f.heureDepart||'—'}</td></tr>
-          <tr><td>Durée sur site</td><td>${fmtDuree(f.dureeSiteMin)}</td></tr>
+          ${f.modeIntervention==='distance' ? '' : `<tr><td>Kilométrage A/R</td><td>${f.km!=null ? f.km+' km' : '<span style="color:var(--gray);font-style:italic">Non calculé</span>'}</td></tr>
+          <tr><td>Temps de trajet A/R</td><td>${f.trajetMin!=null ? fmtDuree(f.trajetMin) : '—'}</td></tr>`}
+          <tr><td>${f.modeIntervention==='distance' ? 'Début → fin' : 'Heure arrivée → départ'}</td><td>${f.heureArrivee||'—'} → ${f.heureDepart||'—'}</td></tr>
+          <tr><td>${f.modeIntervention==='distance' ? "Durée d'intervention" : 'Durée sur site'}</td><td>${fmtDuree(f.dureeSiteMin)}</td></tr>
         </table>
       </div>
 
@@ -1155,8 +1189,9 @@ function updateDureeSite() {
   const dsm = calcDureeSite(ha, hd);
   state.form.dureeSiteMin = dsm;
   const el = document.getElementById('duree-site-display');
+  const lbl = state.form.modeIntervention === 'distance' ? "Durée d'intervention" : 'Durée sur site';
   if (el) el.innerHTML = dsm
-    ? `<div class="duree-site-badge">⏱️ Durée sur site : ${fmtDuree(dsm)}</div>`
+    ? `<div class="duree-site-badge">⏱️ ${lbl} : ${fmtDuree(dsm)}</div>`
     : '';
 }
 
